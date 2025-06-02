@@ -18,7 +18,8 @@ EMBEDDING_MODEL = "text-embedding-3-small"  # or your preferred embedding model
 COMPLETION_MODEL = "gpt-4o-mini"  # or another you want for rewriting + answering
 
 # Load FAISS index & numpy embeddings
-index = faiss.read_index("embeddings.index")
+FAISS_PATH = os.path.join(os.path.dirname(__file__), "embeddings.index")
+index = faiss.read_index(FAISS_PATH)
 
 # Load chunks & metadata
 with open("chunks.json", "r", encoding="utf-8") as f:
