@@ -24,12 +24,10 @@ index = faiss.read_index(FAISS_PATH)
 # Load chunks & metadata
 BASE_DIR = os.path.dirname(__file__)
 CHUNKS_PATH = os.path.join(BASE_DIR, "chunks.json")
-
 with open(CHUNKS_PATH, "r", encoding="utf-8") as f:
     chunks = json.load(f)
 
 METADATA_PATH = os.path.join(BASE_DIR, "metadata.json")
-
 with open(METADATA_PATH, "r", encoding="utf-8") as f:
     metadata = json.load(f)
 
