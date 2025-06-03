@@ -104,10 +104,16 @@ f"{context_text}"
     completion = client.chat.completions.create(
         model=COMPLETION_MODEL,
         messages=final_prompt,
-        max_tokens=512,
-        temperature=0.7
+        max_tokens=1024,
+        temperature=0.7,
+        stream=True
     )
-    answer = completion.choices[0].message.content.strip()
+    answer = ""
+    for chunk in stream:
+        if chunk.choices[0].delta.content:
+            answer += chunk.choices[0].delta.content
+            print(chunk.choices[0].delta.content, end="", flush=True)  # Optional: live print
+
     return answer
 
 TOP_K = 15  # increase to top 15 chunks
