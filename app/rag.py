@@ -83,25 +83,24 @@ def build_context(retrieved_indices):
     return "\n\n".join(context_pieces)
 
 def generate_answer(conversation_history, context_text, rewritten_query):
-    # Compose messages
     final_prompt = conversation_history + [
-    {
-        "role": "system",
-        "content": (
-            "You are a helpful assistant. Answer the question ONLY using the following context."
-"Do NOT use any information outside the context."
-"Always provide citation. When you are writing answer using retrieved content, whenever you reference it, provide numbers. First reference is 1, second is 2 and so on. In the end, provide all citations with their number."
-            "sometimes you can use words close othe retrieved content. for example, if said \"that novelist is good\", it can be rewritten as \"that writer is good\"."
-"Here is the context:"
-f"{context_text}"
-
-        )
-    },
-    {
-        "role": "user",
-        "content": rewritten_query
-    }
-]
+        {
+            "role": "system",
+            "content": (
+                "You are a helpful assistant. Answer the question ONLY using the following context. "
+                "Do NOT use any information outside the context. "
+                "Always provide citation. When you are writing answer using retrieved content, whenever you reference it, provide numbers. First reference is 1, second is 2 and so on. In the end, provide all citations with their number. "
+                "Sometimes you can use words close to the retrieved content. For example, if it said 'that novelist is good', it can be rewritten as 'that writer is good'. "
+                "When the user greets you, simply greet back. When he says ok, take it as an ok and gently offer help if needed. "
+                "\n\nHere is the context:\n"
+                f"{context_text}"
+            )
+        },
+        {
+            "role": "user",
+            "content": rewritten_query
+        }
+    ]
 
     completion = client.chat.completions.create(
         model=COMPLETION_MODEL,
@@ -110,11 +109,12 @@ f"{context_text}"
         temperature=0.7,
         stream=True
     )
+
     answer = ""
-    for chunk in stream:
+    for chunk in completion:  # ✅ stream the response
         if chunk.choices[0].delta.content:
             answer += chunk.choices[0].delta.content
-            print(chunk.choices[0].delta.content, end="", flush=True)  # Optional: live print
+            print(chunk.choices[0].delta.content, end="", flush=True)
 
     return answer
 
