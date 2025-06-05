@@ -4,6 +4,8 @@ from typing import List, Dict
 from rag import rag_pipeline  # your existing pipeline function
 from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
+import os
+
 COMPLETION_MODEL = "gpt-4o-mini"
 client = OpenAI(openai_api_key = os.environ.get("OPENAI_API_KEY"))
 class Message(BaseModel):
