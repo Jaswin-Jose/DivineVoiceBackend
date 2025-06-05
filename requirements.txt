@@ -6,3 +6,4 @@ pydantic==2.11.5
 numpy==2.2.6
 tqdm==4.67.1
 httpx==0.28.1
+firebase-admin==6.5.0
