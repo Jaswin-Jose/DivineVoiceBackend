@@ -11,7 +11,7 @@ from rag import rag_pipeline  # your existing RAG pipeline
 
 # Initialize Firebase
 if not firebase_admin._apps:
-    cred = credentials.Certificate("firebase.json")  # make sure this file exists
+    cred = credentials.Certificate("/etc/secrets/firebase.json")  # make sure this file exists
     firebase_admin.initialize_app(cred)
 db = firestore.client()
 
