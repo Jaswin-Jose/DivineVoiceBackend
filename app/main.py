@@ -7,7 +7,7 @@ from openai import OpenAI
 import os
 
 COMPLETION_MODEL = "gpt-4o-mini"
-client = OpenAI(openai_api_key = os.environ.get("OPENAI_API_KEY"))
+client = OpenAI(api_key = os.environ.get("OPENAI_API_KEY"))
 class Message(BaseModel):
     role: str
     content: str
