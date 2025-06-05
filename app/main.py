@@ -38,4 +38,23 @@ async def chat(request: ChatRequest):
         "response": answer,
         "conversation_history": updated_history
     }
+class OnboardingRequest(BaseModel):
+    conversation_history: List[Dict[str, str]]
+
+@app.post("/onboarding")
+async def onboarding_chat(request: OnboardingRequest):
+    try:
+        completion = client.chat.completions.create(
+            model=COMPLETION_MODEL,
+            messages=request.conversation_history,
+            temperature=0.7,
+            max_tokens=300,
+        )
+        reply = completion.choices[0].message.content
+        return {
+            "response": reply,
+            "conversation_history": request.conversation_history + [{"role": "assistant", "content": reply}]
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
