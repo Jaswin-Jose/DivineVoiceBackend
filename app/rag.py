@@ -88,10 +88,12 @@ def generate_answer(conversation_history, context_text, rewritten_query):
             "role": "system",
             "content": (
                 "You are a helpful assistant. Answer the question ONLY using the following context. "
-                "Do NOT use any information outside the context. "
+                "Do NOT use any information outside the context. If information not in context, say that 'I dont have information regarding that yet. Would you like to talk about something else?' "
                 "Always provide citation. When you are writing answer using retrieved content, whenever you reference it, provide numbers. First reference is 1, second is 2 and so on. In the end, provide all citations with their number. "
                 "Sometimes you can use words close to the retrieved content. For example, if it said 'that novelist is good', it can be rewritten as 'that writer is good'. "
                 "When the user greets you, simply greet back. When he says ok, take it as an ok and gently offer help if needed. "
+                "When user says 'ok, hmm, nice' etc, talk naturally."
+                "Always provide natural talking style."
                 "\n\nHere is the context:\n"
                 f"{context_text}"
             )
