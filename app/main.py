@@ -9,8 +9,6 @@ import json
 from rag import generate_answer  # your RAG pipeline must support (history, query, docs)
 
 # Load allowed document names (e.g. "Intro/Chapter 1.htm")
-with open("output.json", "r") as f:
-    allowed_documents = json.load(f)
 
 # OpenAI Client
 COMPLETION_MODEL = "gpt-4o-mini"
@@ -36,8 +34,7 @@ class ChatRequest(BaseModel):
 async def chat(request: ChatRequest):
     updated_history, answer = generate_answer(
         request.conversation_history,
-        request.query,
-        allowed_documents  # ⬅ make sure rag.py expects this
+        request.query
     )
     return {
         "response": answer,
