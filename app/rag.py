@@ -15,7 +15,8 @@ client = OpenAI(api_key=openai_api_key)
 COMPLETION_MODEL = "gpt-4o-mini"
 
 # Load document names
-with open("output.json", "r") as f:
+file_path = os.path.join(os.path.dirname(__file__), "output.json")
+with open(file_path, "r") as f:
     docs = json.load(f)
 
 docs_text = "Available documents:\n" + "\n".join(docs)
