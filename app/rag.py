@@ -1,101 +1,40 @@
 import json
-import faiss
-import numpy as np
 import os
+import numpy as np
 from openai import OpenAI
 
 # Set your OpenAI API key as env var OPENAI_API_KEY
 openai_api_key = os.environ.get("OPENAI_API_KEY")
-
 if not openai_api_key:
     raise ValueError("Set your OPENAI_API_KEY environment variable")
 
 # Initialize OpenAI client
 client = OpenAI(api_key=openai_api_key)
-TOP_K = 15
-# Constants
-EMBEDDING_MODEL = "text-embedding-3-small"  # or your preferred embedding model
-COMPLETION_MODEL = "gpt-4o-mini"  # or another you want for rewriting + answering
 
-# Load FAISS index & numpy embeddings
-FAISS_PATH = os.path.join(os.path.dirname(__file__), "embeddings.index")
-index = faiss.read_index(FAISS_PATH)
+# Define the model you want to use
+COMPLETION_MODEL = "gpt-4o-mini"
 
-# Load chunks & metadata
-BASE_DIR = os.path.dirname(__file__)
-CHUNKS_PATH = os.path.join(BASE_DIR, "chunks.json")
-with open(CHUNKS_PATH, "r", encoding="utf-8") as f:
-    chunks = json.load(f)
+# Load document names
+with open("output.json", "r") as f:
+    docs = json.load(f)
 
-METADATA_PATH = os.path.join(BASE_DIR, "metadata.json")
-with open(METADATA_PATH, "r", encoding="utf-8") as f:
-    metadata = json.load(f)
+docs_text = "Available documents:\n" + "\n".join(docs)
 
-def embed_text(text):
-    response = client.embeddings.create(
-        model=EMBEDDING_MODEL,
-        input=text
-    )
-    return np.array(response.data[0].embedding).astype("float32")
-
-def rewrite_query(conversation_history):
-    """Rewrite the last user query for clarity, given the conversation history."""
-    messages = conversation_history + [
-        {
-            "role": "system",
-            "content": """
-You are a faithful Catholic theologian. Your task is to take a user's raw question and rewrite it into a clearer, more precise query that can be answered using only official Catholic Church sources such as the Code of Canon Law and writings of the Church Fathers.
-
-When rewriting:
-- Clarify vague or broad language.
-- Add relevant canonical or theological context if needed.
-- Keep the query short, formal, and accurate.
-- Make sure it is shaped in the best way.
-- You should not answer, simply rewrite the question.
-- When user greets you, just greet forward that message.
-- The only data you know is Baltimore Catechism, Bible, Catena Aurea, Imitation Of Christ and Canon Law. When rewriting query don't write anything outside of it.
-- When query is like mathew 3:1-5, rewrite it as mathew 3:1,3:2,3:3,3:4,3:5.
-"""
-        }
-    ]
-    completion = client.chat.completions.create(
-        model=COMPLETION_MODEL,
-        messages=messages,
-        max_tokens=300,
-        temperature=0.7
-    )
-    rewritten = completion.choices[0].message.content.strip()
-    return rewritten
-
-def search_index(query_embedding, top_k=TOP_K):
-    """Search FAISS index for top_k closest chunks."""
-    query_vector = query_embedding.reshape(1, -1)
-    distances, indices = index.search(query_vector, top_k)
-    return indices[0]
-
-def build_context(retrieved_indices):
-    """Build context text by concatenating retrieved chunks."""
-    context_pieces = []
-    for idx in retrieved_indices:
-        chunk_text = chunks[idx]["content"]
-        meta = metadata[idx] if idx < len(metadata) else {}
-        context_pieces.append(chunk_text)
-    return "\n\n".join(context_pieces)
-
-def generate_answer(conversation_history, context_text, rewritten_query):
+def generate_answer(conversation_history, rewritten_query):
+    # Prepare the prompt
     final_prompt = conversation_history + [
         {
             "role": "system",
             "content": (
-                "You are a helpful assistant. Answer the question ONLY using the following context. "
-                "Do NOT use any information outside the context. If information not in context, say that 'I dont have information regarding that yet. Would you like to talk about something else?' "
-                "Always provide citation. When you are writing answer using retrieved content, whenever you reference it, provide numbers. First reference is 1, second is 2 and so on. In the end, provide all citations with their number. "
-                "Sometimes you can use words close to the retrieved content. For example, if it said 'that novelist is good', it can be rewritten as 'that writer is good'. "
-                "When the user greets you, simply greet back. When he says ok, take it as an ok and gently offer help if needed. "
-                "When user says 'ok, hmm, nice' etc, talk naturally."
-                "Always provide natural talking style."
-                "\n\nHere is the context:\n"
-                f"{context_text}"
+                "You are an assistant that can only answer questions using the document names provided. "
+                "You should provide answers with proper citations from those documents. "
+                "In the end, you must cite the name of book as Document/Chapter and wrap them in angled brackets like <<Document/Chapter.htm>>. "
+                "Do NOT use any other knowledge or information. "
+                "Do not mention that you are limited to a list. "
+                "If the user is talking casually, engage with them in the same manner."
+
+                "\n\n"
+                f"{docs_text}"
             )
         },
         {
@@ -113,53 +52,25 @@ def generate_answer(conversation_history, context_text, rewritten_query):
     )
 
     answer = ""
-    for chunk in completion:  # ✅ stream the response
+    for chunk in completion:
         if chunk.choices[0].delta.content:
-            answer += chunk.choices[0].delta.content
-            print(chunk.choices[0].delta.content, end="", flush=True)
+            part = chunk.choices[0].delta.content
+            answer += part
+            print(part, end="", flush=True)
 
-    return answer
-
-TOP_K = 15  # increase to top 15 chunks
-
-def rag_pipeline(user_input, conversation_history):
-    conversation_history.append({"role": "user", "content": user_input})
-
-    # 1. Rewrite query
-    rewritten_query = rewrite_query(conversation_history)
-    print(rewritten_query)
-    # 2. Embed rewritten query
-    query_embedding = embed_text(rewritten_query)
-
-    # 3. Retrieve top 15 chunks
-    retrieved_indices = search_index(query_embedding, TOP_K)
-
-    # 4. Print retrieved chunks for debugging
-    print("\n=== Top 15 Retrieved Chunks ===")
-    for i, idx in enumerate(retrieved_indices):
-        snippet = chunks[idx]["content"][:300].replace("\n", " ")  # first 300 chars no newline
-        print(f"{i+1}. Chunk idx={idx}: {snippet}...")
-
-    # 5. Build context from retrieved chunks only
-    context_text = build_context(retrieved_indices)
-
-    # 6. Generate answer with ONLY these chunks as context
-    answer = generate_answer(conversation_history, context_text, rewritten_query)
-
-    conversation_history.append({"role": "assistant", "content": answer})
-
-    return answer, conversation_history
-
+    return answer, conversation_history + [{"role": "user", "content": rewritten_query},
+                                           {"role": "assistant", "content": answer}]
 
 if __name__ == "__main__":
-    print("RAG Chat ready! Type 'exit' or 'quit' to stop.")
+    print("🕊️ DivineVoice RAG Chat ready! Type 'exit' or 'quit' to stop.\n")
     conv_history = []
     while True:
         user_text = input("\nYou: ").strip()
         if user_text.lower() in ["exit", "quit"]:
+            print("Grace and peace be with you. ✨")
             break
         try:
-            response, conv_history = rag_pipeline(user_text, conv_history)
-            print("\nAssistant:", response)
+            response, conv_history = generate_answer(conv_history, user_text)
+            print("\n")
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"\n😓 Error: {e}")
