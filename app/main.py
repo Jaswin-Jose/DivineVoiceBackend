@@ -7,7 +7,7 @@ import os
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-from rag import rag_pipeline  # your existing RAG pipeline
+from rag import generate_answer  # your existing RAG pipeline
 
 # Initialize Firebase
 if not firebase_admin._apps:
@@ -36,7 +36,7 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    answer, updated_history = rag_pipeline(request.query, request.conversation_history)
+    answer, updated_history = generate_answer(request.query, request.conversation_history)
     return {
         "response": answer,
         "conversation_history": updated_history
