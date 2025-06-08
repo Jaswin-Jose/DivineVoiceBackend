@@ -36,7 +36,7 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    answer, updated_history = generate_answer(request.query, request.conversation_history)
+    updated_history,answer = generate_answer(request.conversation_history,request.query)
     return {
         "response": answer,
         "conversation_history": updated_history
